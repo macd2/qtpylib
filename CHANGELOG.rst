@@ -1,6 +1,57 @@
 Release Notes
 =============
 
+*January 11, 2019*
+
+1.5.82
+-----------
+- Set strategy's logging level to ``INFO``
+- Suppress SQL messages when using ``--dbskip``
+- Added option to set trailing stop offset type by specifiying ``trail_stop_type``. Options are: **amount** and **percent** (default)
+- Defaults to single threaded mode unless otherwise specified
+- Requires ezIBpy >= 1.12.66
+- Lots of bugfixes, and code improvements
+
+*September 17, 2018*
+
+1.5.81
+-----------
+- Added official support for Python 3.7
+- Removed Google and Yahoo data retrieval methods from ``Workflow``
+- Added auto-resample option to ``Workflow.prepare_data``
+- Fixed backtesting issues related to sometimes not logging positions
+- Lots of bugfixes, and code improvements
+
+
+*September 12, 2018*
+
+1.5.80
+-----------
+- Fixed issues related to multi-instrument strategies
+- Misc fixed typos, bugfixes, and code improvements
+
+
+*September 7, 2018*
+
+1.5.79
+-----------
+- Changed license to Apache License 2.0
+- Trailing stop compared against 0 instead of None
+- Fix prices to comply with contract's min-tick
+- Fixed IB futures margin fetcher
+- Fixed CME scraping and active contract parser
+- Avoid sending empty tick/bars to algo
+- Updated code to work with latest version of Pandas
+- Fixed compatibility with the ezIBpy v1.12.62
+- Misc fixed typos, bugfixes, and code improvements
+
+*July 26, 2018*
+
+1.5.78
+-----------
+- Fixed compatibility with the ezIBpy v1.12.58
+- Pushed develop branch to master
+
 *January 12, 2018*
 
 1.5.77

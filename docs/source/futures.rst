@@ -4,10 +4,10 @@ Futures Trading
 Auto-Tuple Generation
 ---------------------
 
-Version 1.4.9 introduced ``futures.make_tuple(...)``, a method
-that automatically constructs a valid instrument tuple for any Futures
+The ``futures.make_tuple(...)`` method automatically
+constructs a valid instrument tuple for any Futures
 contract available on Interactive Brokers, using the information available
-via the `contract specification retrival functionality <#contract-specification>`_.
+via the `contract specification retrieval functionality <#contract-specification>`_.
 
 .. code:: python
 
@@ -78,7 +78,7 @@ In this case
 
 
 .. note::
-    This functionality currently only works for the CME Group's futures (inc. CME, GLOBEX, CBOT, NYMEX and COMEX).
+    This functionality currently only works for the CME Group's futures (inc. CME, GLOBEX, CBOT, NYMEX, and COMEX).
 
 
 -----
@@ -115,7 +115,6 @@ if it's older than 24 hours.
         'currency': 'USD',
         'description': 'E-mini NASDAQ 100 Futures',
         'exchange': 'GLOBEX',
-        'has_options': True,
         'intraday_initial': 2250.0,
         'intraday_maintenance': 1800.0,
         'overnight_initial': 4500.0,

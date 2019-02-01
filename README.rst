@@ -1,13 +1,9 @@
 QTPyLib, Pythonic Algorithmic Trading
 =====================================
 
-.. image:: https://img.shields.io/pypi/pyversions/qtpylib.svg?maxAge=60
+.. image:: https://img.shields.io/badge/python-3.4+-blue.svg?style=flat
     :target: https://pypi.python.org/pypi/qtpylib
     :alt: Python version
-
-.. image:: https://img.shields.io/travis/ranaroussi/qtpylib/master.svg?maxAge=1
-    :target: https://travis-ci.org/ranaroussi/qtpylib
-    :alt: Travis-CI build status
 
 .. image:: https://img.shields.io/pypi/v/qtpylib.svg?maxAge=60
     :target: https://pypi.python.org/pypi/qtpylib
@@ -17,6 +13,10 @@ QTPyLib, Pythonic Algorithmic Trading
     :target: https://pypi.python.org/pypi/qtpylib
     :alt: PyPi status
 
+.. image:: https://img.shields.io/travis/ranaroussi/qtpylib/master.svg?maxAge=1
+    :target: https://travis-ci.org/ranaroussi/qtpylib
+    :alt: Travis-CI build status
+
 .. image:: https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat
     :target: http://qtpylib.io/docs/latest/?badge=latest
     :alt: Documentation Status
@@ -25,20 +25,19 @@ QTPyLib, Pythonic Algorithmic Trading
     :target: https://github.com/ranaroussi/qtpylib
     :alt: Star this repo
 
-.. image:: https://img.shields.io/twitter/follow/aroussi.svg?style=social&label=Follow%20Me&maxAge=60
+.. image:: https://img.shields.io/twitter/follow/aroussi.svg?style=social&label=Follow&maxAge=60
     :target: https://twitter.com/aroussi
     :alt: Follow me on twitter
 
 \
 
 QTPyLib (**Q**\ uantitative **T**\ rading **Py**\ thon **Lib**\ rary)
-is a simple, event-driven algorithmic trading system written in Python 3,
-that supports backtesting and live trading using
-`Interactive Brokers <https://www.interactivebrokers.com>`_
-for market data and order execution.
+is a simple, **event-driven algorithmic trading library** written in Python,
+that supports backtesting, as well as paper and live trading via
+`Interactive Brokers <https://www.interactivebrokers.com>`_.
 
-I originally developed QTPyLib because I wanted for a simple
-(but powerful) trading library that will let me to focus on the
+I developed QTPyLib because I wanted for a simple,
+yet powerful, trading library that will let me focus on the
 trading logic itself and ignore everything else.
 
 `Full Documentation » <http://www.qtpylib.io/>`_
@@ -51,11 +50,11 @@ Features
 ========
 
 - A continuously-running Blotter that lets you capture market data even when your algos aren't running.
-- Tick, Bar and Trade data is stored in MySQL for later analisys and backtesting.
+- Tick, Bar and Trade data is stored in MySQL for later analysis and backtesting.
 - Using pub/sub architecture using `ØMQ <http://zeromq.org>`_ (ZeroMQ) for communicating between the Algo and the Blotter allows for a single Blotter/multiple Algos running on the same machine.
 - **Support for Order Book, Quote, Time, Tick or Volume based strategy resolutions**.
 - Includes many common indicators that you can seamlessly use in your algorithm.
-- **Market data events uses asynchronous, non-blocking architecture**.
+- **Market data events use asynchronous, non-blocking architecture**.
 - Have orders delivered to your mobile via SMS (requires a `Nexmo <https://www.nexmo.com/>`_ or `Twilio <https://www.twilio.com/>`_ account).
 - Full integration with `TA-Lib <http://ta-lib.org>`_ via dedicated module (`see documentation <http://qtpylib.io/docs/latest/indicators.html#ta-lib-integration>`_).
 - Ability to import any Python library (such as `scikit-learn <http://scikit-learn.org>`_ or `TensorFlow <https://www.tensorflow.org>`_) to use them in your algorithms.
@@ -67,10 +66,10 @@ Quickstart
 
 There are 5 main components to QTPyLib:
 
-1. ``Blotter`` - handles market data retreival and processing.
-2. ``Broker`` - sends and proccess orders/positions (abstracted layer).
-3. ``Algo`` - (sub-class of ``Broker``) communicates with the ``Blotter`` to pass market data to your strategies, and proccess/positions orders via ``Broker``.
-4. ``Reports`` - provides real time monitoring of trades and open opsitions via Web App, as well as a simple REST API for trades, open positions and market data.
+1. ``Blotter`` - handles market data retrieval and processing.
+2. ``Broker`` - sends and process orders/positions (abstracted layer).
+3. ``Algo`` - (sub-class of ``Broker``) communicates with the ``Blotter`` to pass market data to your strategies, and process/positions orders via ``Broker``.
+4. ``Reports`` - provides real-time monitoring of trades and open positions via Web App, as well as a simple REST API for trades, open positions, and market data.
 5. Lastly, **Your Strategies**, which are sub-classes of ``Algo``, handle the trading logic/rules. This is where you'll write most of your code.
 
 
@@ -223,7 +222,10 @@ Now, point your browser to http://localhost:5000 and use the password generated 
 
 -----
 
+
 .. note::
+
+    You can find other examples in the ``qtpylib/examples directory``.
     Please refer to the `Full Documentation <http://www.qtpylib.io/>`_ to learn
     how to enable SMS notifications, use the bundled Indicators, and more.
 
@@ -245,17 +247,16 @@ Requirements
 * `Python <https://www.python.org>`_ >=3.4
 * `Pandas <https://github.com/pydata/pandas>`_ (tested to work with >=0.18.1)
 * `Numpy <https://github.com/numpy/numpy>`_ (tested to work with >=1.11.1)
-* `PyZMQ <https://github.com/zeromq/pyzmq>`_ (tested to with with >=15.2.1)
-* `PyMySQL <https://github.com/PyMySQL/PyMySQL>`_ (tested to with with >=0.7.6)
-* `pytz <http://pytz.sourceforge.net>`_ (tested to with with >=2016.6.1)
-* `dateutil <https://pypi.python.org/pypi/python-dateutil>`_ (tested to with with >=2.5.1)
-* `Nexmo-Python <https://github.com/Nexmo/nexmo-python>`_ for SMS support (tested to with with >=1.2.0)
-* `Twilio-Python <https://github.com/twilio/twilio-python>`_ for SMS support (tested to with with >=5.4.0)
+* `PyZMQ <https://github.com/zeromq/pyzmq>`_ (tested to work with >=15.2.1)
+* `PyMySQL <https://github.com/PyMySQL/PyMySQL>`_ (tested to work with >=0.7.6)
+* `pytz <http://pytz.sourceforge.net>`_ (tested to work with >=2016.6.1)
+* `dateutil <https://pypi.python.org/pypi/python-dateutil>`_ (tested to work with >=2.5.1)
+* `Nexmo-Python <https://github.com/Nexmo/nexmo-python>`_ for SMS support (tested to work with >=1.2.0)
+* `Twilio-Python <https://github.com/twilio/twilio-python>`_ for SMS support (tested to work with >=5.4.0)
 * `Flask <http://flask.pocoo.org>`_ for the Dashboard (tested to work with >=0.11)
-* `Requests <https://github.com/kennethreitz/requests>`_ (tested to with with >=2.10.0)
-* `Beautiful Soup <https://pypi.python.org/pypi/beautifulsoup4>`_ (tested to work with >=4.3.2)
+* `Requests <https://github.com/kennethreitz/requests>`_ (tested to work with >=2.10.0)
 * `IbPy2 <https://github.com/blampe/IbPy>`_ (tested to work with >=0.8.0)
-* `ezIBpy <https://github.com/ranaroussi/ezibpy>`_ (IbPy wrapper, tested to with with >=1.12.56)
+* `ezIBpy <https://github.com/ranaroussi/ezibpy>`_ (IbPy wrapper, tested to work with >=1.12.66)
 * Latest Interactive Brokers’ `TWS <https://www.interactivebrokers.com/en/index.php?f=15875>`_ or `IB Gateway <https://www.interactivebrokers.com/en/index.php?f=16457>`_ installed and running on the machine
 * `MySQL Server <https://www.mysql.com/>`_ installed and running with a database for QTPyLib
 
@@ -264,15 +265,15 @@ Requirements
 Legal Stuff
 ===========
 
-QTPyLib is distributed under the **GNU Lesser General Public License v3.0**. See the `LICENSE.txt <./LICENSE.txt>`_ file in the release for details.
+QTPyLib is licensed under the **Apache License, Version 2.0**. A copy of which is included in LICENSE.txt.
+
 QTPyLib is not a product of Interactive Brokers, nor is it affiliated with Interactive Brokers.
 
 
-You can find other examples in the qtpylib/examples directory.
 
 P.S.
 ----
 
-I'm very interested in your experience with QTPyLib. Please drop me an note with any feedback you have.
+I'm very interested in your experience with QTPyLib. Please drop me a note with any feedback you have.
 
-**Ran Aroussi**
+**Ran**

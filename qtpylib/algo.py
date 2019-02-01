@@ -4,13 +4,13 @@
 # QTPyLib: Quantitative Trading Python Library
 # https://github.com/ranaroussi/qtpylib
 #
-# Copyright 2016 Ran Aroussi
+# Copyright 2016-2018 Ran Aroussi
 #
-# Licensed under the GNU Lesser General Public License, v3.0 (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://www.gnu.org/licenses/lgpl-3.0.en.html
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,23 +21,22 @@
 
 import argparse
 import inspect
-import pandas as pd
-from numpy import nan
 import sys
 import logging
 import os
 
 from datetime import datetime
+from abc import ABCMeta, abstractmethod
+
+import pandas as pd
+from numpy import nan
 
 from qtpylib.broker import Broker
-from qtpylib.instrument import Instrument
 from qtpylib.workflow import validate_columns as validate_csv_columns
 from qtpylib.blotter import prepare_history
 from qtpylib import (
     tools, sms, asynctools
 )
-
-from abc import ABCMeta, abstractmethod
 
 # =============================================
 # check min, python version
@@ -50,8 +49,8 @@ tools.createLogger(__name__)
 
 # =============================================
 # set up threading pool
-__threads__ = tools.read_single_argv("--max_threads")
-__threads__ = int(__threads__) if tools.is_number(__threads__) else 1
+__threads__ = tools.read_single_argv("--threads")
+__threads__ = int(__threads__) if tools.is_number(__threads__) else None
 asynctools.multitasking.createPool(__name__, __threads__)
 
 # =============================================
@@ -65,19 +64,23 @@ class Algo(Broker):
         instruments : list
             List of IB contract tuples. Default is empty list
         resolution : str
-            Desired bar resolution (using pandas resolution: 1T, 1H, etc). Use K for tick bars. Default is 1T (1min)
+            Desired bar resolution (using pandas resolution: 1T, 1H, etc).
+            Use K for tick bars. Default is 1T (1min)
         tick_window : int
             Length of tick lookback window to keep. Defaults to 1
         bar_window : int
             Length of bar lookback window to keep. Defaults to 100
         timezone : str
-            Convert IB timestamps to this timezone (eg. US/Central). Defaults to UTC
+            Convert IB timestamps to this timezone (eg. US/Central).
+            Defaults to UTC
         preload : str
-            Preload history when starting algo (using pandas resolution: 1H, 1D, etc). Use K for tick bars.
+            Preload history when starting algo (Pandas resolution: 1H, 1D, etc)
+            Use K for tick bars.
         continuous : bool
-            Tells preloader to construct continuous Futures contracts (default is True)
+            Tells preloader to construct continuous Futures contracts
+            (default is True)
         blotter : str
-            Log trades to MySQL server used by this Blotter (default is "auto detect")
+            Log trades to this Blotter's MySQL (default is "auto detect")
         sms: set
             List of numbers to text orders (default: None)
         log: str
@@ -89,7 +92,7 @@ class Algo(Broker):
         end: str
             Backtest end date (YYYY-MM-DD [HH:MM:SS[.MS]). Default is None
         data : str
-            Path to the directory with QTPyLib-compatible CSV files (for Backtesting using CSV files)
+            Path to the directory with QTPyLib-compatible CSV files (Backtest)
         output: str
             Path to save the recorded data (default: None)
         ibport: int
@@ -102,11 +105,11 @@ class Algo(Broker):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, instruments=[], resolution="1T",
-        tick_window=1, bar_window=100, timezone="UTC", preload=None,
-        continuous=True, blotter=None, sms=[], log=None, backtest=False,
-        start=None, end=None, data=None, output=None,
-        ibclient=998, ibport=4001, ibserver="localhost", **kwargs):
+    def __init__(self, instruments, resolution="1T",
+                 tick_window=1, bar_window=100, timezone="UTC", preload=None,
+                 continuous=True, blotter=None, sms=None, log=None,
+                 backtest=False, start=None, end=None, data=None, output=None,
+                 ibclient=998, ibport=4001, ibserver="localhost", **kwargs):
 
         # detect algo name
         self.name = str(self.__class__).split('.')[-1].split("'")[0]
@@ -115,49 +118,80 @@ class Algo(Broker):
         self.log_algo = logging.getLogger(__name__)
 
         # initilize strategy logger
-        tools.createLogger(self.name)
+        tools.createLogger(self.name, level=logging.INFO)
         self.log = logging.getLogger(self.name)
 
         # override args with any (non-default) command-line args
         self.args = {arg: val for arg, val in locals().items(
-            ) if arg not in ('__class__', 'self', 'kwargs')}
+        ) if arg not in ('__class__', 'self', 'kwargs')}
         self.args.update(kwargs)
         self.args.update(self.load_cli_args())
 
+        # -----------------------------------
         # assign algo params
-        self.bars           = pd.DataFrame()
-        self.ticks          = pd.DataFrame()
-        self.quotes         = {}
-        self.books          = {}
-        self.tick_count     = 0
+        self.bars = pd.DataFrame()
+        self.ticks = pd.DataFrame()
+        self.quotes = {}
+        self.books = {}
+        self.tick_count = 0
         self.tick_bar_count = 0
-        self.bar_count      = 0
-        self.bar_hashes     = {}
+        self.bar_count = 0
+        self.bar_hashes = {}
 
-        self.tick_window    = tick_window if tick_window > 0 else 1
+        self.tick_window = tick_window if tick_window > 0 else 1
         if "V" in resolution:
             self.tick_window = 1000
-        self.bar_window     = bar_window if bar_window > 0 else 100
-        self.resolution     = resolution.upper().replace("MIN", "T")
-        self.timezone       = timezone
-        self.preload        = preload
-        self.continuous     = continuous
-
-        self.backtest       = self.args["backtest"]
-        self.backtest_start = self.args["start"]
-        self.backtest_end   = self.args["end"]
-        self.backtest_csv   = self.args["data"]
+        self.bar_window = bar_window if bar_window > 0 else 100
+        self.resolution = resolution.upper().replace("MIN", "T")
+        self.timezone = timezone
+        self.preload = preload
+        self.continuous = continuous
 
         # -----------------------------------
-        self.sms_numbers    = self.args["sms"]
-        self.trade_log_dir  = self.args["log"]
-        self.blotter_name   = self.args["blotter"]
-        self.record_output  = self.args["output"]
+        # backtest info
+        self.backtest = self.args["backtest"]
+        self.backtest_start = self.args["start"]
+        self.backtest_end = self.args["end"]
+        self.backtest_csv = self.args["data"]
+
+        # -----------------------------------
+        self.sms_numbers = self.args["sms"]
+        self.trade_log_dir = self.args["log"]
+        self.blotter_name = self.args["blotter"]
+        self.record_output = self.args["output"]
+
+        # ---------------------------------------
+        # sanity checks for backtesting mode
+        if self.backtest:
+            if self.record_output is None:
+                self.log_algo.error(
+                    "Must provide an output file for Backtest mode")
+                sys.exit(0)
+            if self.backtest_start is None:
+                self.log_algo.error(
+                    "Must provide start date for Backtest mode")
+                sys.exit(0)
+            if self.backtest_end is None:
+                self.backtest_end = datetime.now().strftime(
+                    '%Y-%m-%d %H:%M:%S.%f')
+            if self.backtest_csv is not None:
+                if not os.path.exists(self.backtest_csv):
+                    self.log_algo.error(
+                        "CSV directory cannot be found (%s)",
+                        self.backtest_csv)
+                    sys.exit(0)
+                elif self.backtest_csv.endswith("/"):
+                    self.backtest_csv = self.backtest_csv[:-1]
+
+        else:
+            self.backtest_start = None
+            self.backtest_end = None
+            self.backtest_csv = None
 
         # -----------------------------------
         # initiate broker/order manager
-        super().__init__(instruments,
-            **{arg: val for arg, val in self.args.items() if arg in (
+        super().__init__(instruments, **{
+            arg: val for arg, val in self.args.items() if arg in (
                 'ibport', 'ibclient', 'ibhost')})
 
         # -----------------------------------
@@ -174,54 +208,36 @@ class Algo(Broker):
 
         # ---------------------------------------
         # add stale ticks for more accurate time--based bars
-        if not self.backtest and self.resolution[-1] not in ("K", "V"):
+        if not self.backtest and self.resolution[-1] not in ("S", "K", "V"):
             self.bar_timer = asynctools.RecurringTask(
                 self.add_stale_tick, interval_sec=1, init_sec=1, daemon=True)
 
         # ---------------------------------------
-        # sanity checks for backtesting mode
-        if self.backtest:
-            if self.record_output is None:
-                self.log_algo.error("Must provide an output file for Backtest mode")
-                sys.exit(0)
-            if self.backtest_start is None:
-                self.log_algo.error("Must provide start date for Backtest mode")
-                sys.exit(0)
-            if self.backtest_end is None:
-                self.backtest_end = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
-            if self.backtest_csv is not None:
-                if not os.path.exists(self.backtest_csv):
-                    self.log_algo.error("CSV directory cannot be found (%s)" % self.backtest_csv)
-                    sys.exit(0)
-                elif self.backtest_csv.endswith("/"):
-                    self.backtest_csv = self.backtest_csv[:-1]
-
-        else:
-            self.backtest_start = None
-            self.backtest_end   = None
-            self.backtest_csv   = None
-
         # be aware of thread count
         self.threads = asynctools.multitasking.getPool(__name__)['threads']
+
 
     # ---------------------------------------
     def add_stale_tick(self):
         ticks = self.ticks.copy()
-        if len(self.ticks.index) > 0:
-            last_tick_sec = float(tools.datetime64_to_datetime(
-                ticks.index.values[-1]).strftime('%M.%S'))
+        if self.ticks.empty:
+            return
 
-            for sym in list(self.ticks["symbol"].unique()):
-                tick = ticks[ticks['symbol'] == sym][-5:].to_dict(orient='records')[-1]
-                tick['timestamp'] = datetime.utcnow()
+        last_tick_sec = float(tools.datetime64_to_datetime(
+            ticks.index.values[-1]).strftime('%M.%S'))
 
-                if last_tick_sec != float(tick['timestamp'].strftime("%M.%S")):
-                    tick = pd.DataFrame(index=[0], data=tick)
-                    tick.set_index('timestamp', inplace=True)
-                    tick = tools.set_timezone(tick, tz=self.timezone)
-                    tick.loc[:, 'lastsize'] = 0 # no real size
+        for sym in list(self.ticks["symbol"].unique()):
+            tick = ticks[ticks['symbol'] ==
+                         sym][-5:].to_dict(orient='records')[-1]
+            tick['timestamp'] = datetime.utcnow()
 
-                    self._tick_handler(tick, stale_tick=True)
+            if last_tick_sec != float(tick['timestamp'].strftime("%M.%S")):
+                tick = pd.DataFrame(index=[0], data=tick)
+                tick.set_index('timestamp', inplace=True)
+                tick = tools.set_timezone(tick, tz=self.timezone)
+                tick.loc[:, 'lastsize'] = 0  # no real size
+
+                self._tick_handler(tick, stale_tick=True)
 
     # ---------------------------------------
     def load_cli_args(self):
@@ -231,8 +247,9 @@ class Algo(Broker):
         :Retruns: dict
             a dict of any non-default args passed on the command-line.
         """
-        parser = argparse.ArgumentParser(description='QTPyLib Algo',
-                            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        parser = argparse.ArgumentParser(
+            description='QTPyLib Algo',
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
         parser.add_argument('--ibport', default=self.args["ibport"],
                             help='IB TWS/GW Port', type=int)
@@ -258,13 +275,14 @@ class Algo(Broker):
         parser.add_argument('--blotter',
                             help='Log trades to this Blotter\'s MySQL')
         parser.add_argument('--continuous', default=self.args["continuous"],
-                            help='Construct continuous Futures contracts (flag)',
+                            help='Use continuous Futures contracts (flag)',
                             action='store_true')
 
         # only return non-default cmd line args
         # (meaning only those actually given)
-        cmd_args, unknown = parser.parse_known_args()
-        args = {arg: val for arg, val in vars(cmd_args).items() if val != parser.get_default(arg)}
+        cmd_args, _ = parser.parse_known_args()
+        args = {arg: val for arg, val in vars(
+            cmd_args).items() if val != parser.get_default(arg)}
         return args
 
     # ---------------------------------------
@@ -280,49 +298,59 @@ class Algo(Broker):
 
         # get history from csv dir
         if self.backtest and self.backtest_csv:
-            kind = "TICK" if self.resolution[-1] in ("K", "V") else "BAR"
+            kind = "TICK" if self.resolution[-1] in ("S", "K", "V") else "BAR"
             dfs = []
             for symbol in self.symbols:
                 file = "%s/%s.%s.csv" % (self.backtest_csv, symbol, kind)
                 if not os.path.exists(file):
-                    self.log_algo.error("Can't load data for %s (%s doesn't exist)" % (symbol, file))
+                    self.log_algo.error(
+                        "Can't load data for %s (%s doesn't exist)",
+                        symbol, file)
                     sys.exit(0)
                 try:
                     df = pd.read_csv(file)
+                    if "expiry" not in df.columns:
+                        df.loc[:, "expiry"] = nan
 
-                    if "expiry" not in df.columns or not validate_csv_columns(df, kind, raise_errors=False):
-                        self.log_algo.error("%s Doesn't appear to be a QTPyLib-compatible format" % file)
+                    if not validate_csv_columns(df, kind, raise_errors=False):
+                        self.log_algo.error(
+                            "%s isn't a QTPyLib-compatible format", file)
                         sys.exit(0)
+
                     if df['symbol'].values[-1] != symbol:
-                        self.log_algo.error("%s Doesn't content data for %s" % (file, symbol))
+                        self.log_algo.error(
+                            "%s Doesn't content data for %s", file, symbol)
                         sys.exit(0)
+
                     dfs.append(df)
 
-                except:
-                    self.log_algo.error("Error reading data for %s (%s)" % (symbol, file))
+                except Exception as e:
+                    self.log_algo.error(
+                        "Error reading data for %s (%s)", symbol, file)
                     sys.exit(0)
 
             history = prepare_history(
-                data       = pd.concat(dfs),
-                resolution = self.resolution,
-                tz         = self.timezone,
-                continuous = self.continuous
+                data=pd.concat(dfs, sort=True),
+                resolution=self.resolution,
+                tz=self.timezone,
+                continuous=self.continuous
             )
             history = history[history.index >= self.backtest_start]
 
+        elif not self.blotter_args["dbskip"] and (
+                self.backtest or self.preload):
 
-        elif not self.blotter_args["dbskip"] and (self.backtest or self.preload):
-
-            start = self.backtest_start if self.backtest else tools.backdate(self.preload)
+            start = self.backtest_start if self.backtest else tools.backdate(
+                self.preload)
             end = self.backtest_end if self.backtest else None
 
             history = self.blotter.history(
-                symbols    = self.symbols,
-                start      = start,
-                end        = end,
-                resolution = self.resolution,
-                tz         = self.timezone,
-                continuous = self.continuous
+                symbols=self.symbols,
+                start=start,
+                end=end,
+                resolution=self.resolution,
+                tz=self.timezone,
+                continuous=self.continuous
             )
 
             # history needs backfilling?
@@ -332,29 +360,37 @@ class Algo(Broker):
                 self.blotter.ibConn = self.ibConn
 
                 # call the back fill
-                self.blotter.backfill(data=history, resolution=self.resolution, start=start, end=end)
+                self.blotter.backfill(data=history,
+                                      resolution=self.resolution,
+                                      start=start, end=end)
 
                 # re-get history from db
                 history = self.blotter.history(
-                    symbols    = self.symbols,
-                    start      = start,
-                    end        = end,
-                    resolution = self.resolution,
-                    tz         = self.timezone,
-                    continuous = self.continuous
+                    symbols=self.symbols,
+                    start=start,
+                    end=end,
+                    resolution=self.resolution,
+                    tz=self.timezone,
+                    continuous=self.continuous
                 )
 
                 # take our ibConn back :)
                 self.blotter.ibConn = None
 
+        # optimize pandas
+        if not history.empty:
+            history['symbol'] = history['symbol'].astype('category')
+            history['symbol_group'] = history['symbol_group'].astype('category')
+            history['asset_class'] = history['asset_class'].astype('category')
 
         if self.backtest:
             # initiate strategy
             self.on_start()
 
             # drip history
-            self.blotter.drip(history,
-                self._tick_handler if self.resolution[-1] in ("K", "V") else self._bar_handler)
+            drip_handler = self._tick_handler if self.resolution[-1] in (
+                "S", "K", "V") else self._bar_handler
+            self.blotter.drip(history, drip_handler)
 
         else:
             # place history self.bars
@@ -368,12 +404,12 @@ class Algo(Broker):
 
             # listen for RT data
             self.blotter.stream(
-                symbols       = self.symbols,
-                tz            = self.timezone,
-                quote_handler = self._quote_handler,
-                tick_handler  = self._tick_handler,
-                bar_handler   = self._bar_handler,
-                book_handler  = self._book_handler
+                symbols=self.symbols,
+                tz=self.timezone,
+                quote_handler=self._quote_handler,
+                tick_handler=self._tick_handler,
+                bar_handler=self._bar_handler,
+                book_handler=self._book_handler
             )
 
     # ---------------------------------------
@@ -440,7 +476,7 @@ class Algo(Broker):
     def on_orderbook(self, instrument):
         """
         Invoked on every change to the orderbook for the selected instrument.
-        This is where you'll write your strategy logic for orderbook changes events.
+        This is where you'll write your strategy logic for orderbook events.
 
         :Parameters:
 
@@ -470,29 +506,6 @@ class Algo(Broker):
         pass
 
     # ---------------------------------------
-    def get_instrument(self, symbol):
-        """
-        A string subclass that provides easy access to misc
-        symbol-related methods and information using shorthand.
-        Refer to the `Instruments API <#instrument-api>`_
-        for available methods and properties
-
-        Call from within your strategy:
-        ``instrument = self.get_instrument("SYMBOL")``
-
-        :Parameters:
-
-            symbol : string
-                instrument symbol
-
-        """
-        instrument = Instrument(self._getsymbol_(symbol))
-        instrument._set_parent(self)
-        instrument._set_windows(ticks=self.tick_window, bars=self.bar_window)
-
-        return instrument
-
-    # ---------------------------------------
     def get_history(self, symbols, start, end=None, resolution="1T", tz="UTC"):
         """Get historical market data.
         Connects to Blotter and gets historical data from storage
@@ -501,11 +514,13 @@ class Algo(Broker):
             symbols : list
                 List of symbols to fetch history for
             start : datetime / string
-                History time period start date (datetime or YYYY-MM-DD[ HH:MM[:SS]] string)
+                History time period start date
+                datetime or YYYY-MM-DD[ HH:MM[:SS]] string)
 
         :Optional:
             end : datetime / string
-                History time period end date (datetime or YYYY-MM-DD[ HH:MM[:SS]] string)
+                History time period end date
+                (datetime or YYYY-MM-DD[ HH:MM[:SS]] string)
             resolution : string
                 History resoluton (Pandas resample, defaults to 1T/1min)
             tz : string
@@ -537,42 +552,52 @@ class Algo(Broker):
             limit_price : float
                 In case of a LIMIT order, this is the LIMIT PRICE
             expiry : int
-                Cancel this order if not filled after *n* seconds (default 60 seconds)
+                Cancel this order if not filled after *n* seconds
+                (default 60 seconds)
             order_type : string
-                Type of order: Market (default), LIMIT (default when limit_price is passed), MODIFY (required passing or orderId)
+                Type of order: Market (default),
+                LIMIT (default when limit_price is passed),
+                MODIFY (required passing or orderId)
             orderId : int
                 If modifying an order, the order id of the modified order
             target : float
-                target (exit) price
+                Target (exit) price
             initial_stop : float
-                price to set hard stop
+                Price to set hard stop
             stop_limit: bool
-                Flag to indicate if the stop should be STOP or STOP LIMIT (default False=STOP)
+                Flag to indicate if the stop should be STOP or STOP LIMIT.
+                Default is ``False`` (STOP)
             trail_stop_at : float
-                price at which to start trailing the stop
+                Price at which to start trailing the stop
+            trail_stop_type : string
+                Type of traiing stop offset (amount, percent).
+                Default is ``percent``
             trail_stop_by : float
-                % of trailing stop distance from current price
+                Offset of trailing stop distance from current price
             fillorkill: bool
-                fill entire quantiry or none at all
+                Fill entire quantiry or none at all
             iceberg: bool
-                is this an iceberg (hidden) order
+                Is this an iceberg (hidden) order
             tif: str
-                time in force (DAY, GTC, IOC, GTD). default is ``DAY``
+                Time in force (DAY, GTC, IOC, GTD). default is ``DAY``
         """
-        self.log_algo.debug('ORDER: %s %4d %s %s', signal, quantity, symbol, kwargs)
+        self.log_algo.debug('ORDER: %s %4d %s %s', signal,
+                            quantity, symbol, kwargs)
         if signal.upper() == "EXIT" or signal.upper() == "FLATTEN":
             position = self.get_positions(symbol)
             if position['position'] == 0:
                 return
 
-            kwargs['symbol']    = symbol
-            kwargs['quantity']  = abs(position['position'])
+            kwargs['symbol'] = symbol
+            kwargs['quantity'] = abs(position['position'])
             kwargs['direction'] = "BUY" if position['position'] < 0 else "SELL"
 
             # print("EXIT", kwargs)
 
-            try: self.record(position=0)
-            except: pass
+            try:
+                self.record({symbol+'_POSITION': 0})
+            except Exception as e:
+                pass
 
             if not self.backtest:
                 self._create_order(**kwargs)
@@ -581,17 +606,19 @@ class Algo(Broker):
             if quantity == 0:
                 return
 
-            kwargs['symbol']    = symbol
-            kwargs['quantity']  = abs(quantity)
+            kwargs['symbol'] = symbol
+            kwargs['quantity'] = abs(quantity)
             kwargs['direction'] = signal.upper()
 
             # print(signal.upper(), kwargs)
 
             # record
             try:
-                quantity = -quantity if kwargs['direction'] == "BUY" else quantity
-                self.record(position=quantity)
-            except:
+                quantity = abs(quantity)
+                if kwargs['direction'] != "BUY":
+                    quantity = -quantity
+                self.record({symbol+'_POSITION': quantity})
+            except Exception as e:
                 pass
 
             if not self.backtest:
@@ -623,9 +650,10 @@ class Algo(Broker):
 
         """
         if self.record_output:
-            try: self.datastore.record(self.record_ts, *args, **kwargs)
-            except: pass
-
+            try:
+                self.datastore.record(self.record_ts, *args, **kwargs)
+            except Exception as e:
+                pass
 
     # ---------------------------------------
     def sms(self, text):
@@ -641,11 +669,12 @@ class Algo(Broker):
                 The body of the SMS message to send
 
         """
-        logging.info("SMS: " + str(text))
+        logging.info("SMS: %s", str(text))
         sms.send_text(self.name + ': ' + str(text), self.sms_numbers)
 
     # ---------------------------------------
-    def _caller(self, caller):
+    @staticmethod
+    def _caller(caller):
         stack = [x[3] for x in inspect.stack()][1:-1]
         return caller in stack
 
@@ -673,14 +702,16 @@ class Algo(Broker):
         dfs = []
         for sym in list(df["symbol"].unique()):
             dfs.append(df[df['symbol'] == sym][-window:])
-        return pd.concat(dfs).sort_index()
+        return pd.concat(dfs, sort=True).sort_index()
+
 
     # ---------------------------------------
     @staticmethod
     def _thread_safe_merge(symbol, basedata, newdata):
         data = newdata
         if "symbol" in basedata.columns:
-            data = pd.concat([basedata[basedata['symbol'] != symbol], data])
+            data = pd.concat(
+                [basedata[basedata['symbol'] != symbol], data], sort=True)
 
         data.loc[:, '_idx_'] = data.index
         data = data.drop_duplicates(
@@ -690,8 +721,9 @@ class Algo(Broker):
         data = data.sort_index()
 
         try:
-            return data.dropna(subset=['open', 'high', 'low', 'close', 'volume'])
-        except:
+            return data.dropna(subset=[
+                'open', 'high', 'low', 'close', 'volume'])
+        except Exception as e:
             return data
 
     # ---------------------------------------
@@ -700,8 +732,14 @@ class Algo(Broker):
         self._cancel_expired_pending_orders()
 
         # tick symbol
-        symbol = tick['symbol'].values[0]
-        self_ticks = self.ticks.copy() # work on copy
+        symbol = tick['symbol'].values
+        if len(symbol) == 0:
+            return
+        symbol = symbol[0]
+        self.last_price[symbol] = float(tick['last'].values[0])
+
+        # work on copy
+        self_ticks = self.ticks.copy()
 
         # initial value
         if self.record_ts is None:
@@ -709,25 +747,33 @@ class Algo(Broker):
 
         if self.resolution[-1] not in ("S", "K", "V"):
             if self.threads == 0:
-                self.ticks = self._update_window(self.ticks, tick, window=self.tick_window)
+                self.ticks = self._update_window(
+                    self.ticks, tick, window=self.tick_window)
             else:
-                self_ticks = self._update_window(self_ticks, tick, window=self.tick_window)
-                self.ticks = self._thread_safe_merge(symbol, self.ticks, self_ticks) # assign back
+                self_ticks = self._update_window(
+                    self_ticks, tick, window=self.tick_window)
+                self.ticks = self._thread_safe_merge(
+                    symbol, self.ticks, self_ticks)  # assign back
         else:
             self.ticks = self._update_window(self.ticks, tick)
             # bars = tools.resample(self.ticks, self.resolution)
-            bars = tools.resample(self.ticks, self.resolution, tz=self.timezone)
+            bars = tools.resample(
+                self.ticks, self.resolution, tz=self.timezone)
 
             if len(bars.index) > self.tick_bar_count > 0 or stale_tick:
                 self.record_ts = tick.index[0]
                 self._base_bar_handler(bars[bars['symbol'] == symbol][-1:])
 
-                window = int("".join([s for s in self.resolution if s.isdigit()]))
+                window = int(
+                    "".join([s for s in self.resolution if s.isdigit()]))
                 if self.threads == 0:
-                    self.ticks = self._get_window_per_symbol(self.ticks, window)
+                    self.ticks = self._get_window_per_symbol(
+                        self.ticks, window)
                 else:
-                    self_ticks = self._get_window_per_symbol(self_ticks, window)
-                    self.ticks = self._thread_safe_merge(symbol, self.ticks, self_ticks) # assign back
+                    self_ticks = self._get_window_per_symbol(
+                        self_ticks, window)
+                    self.ticks = self._thread_safe_merge(
+                        symbol, self.ticks, self_ticks)  # assign back
 
             self.tick_bar_count = len(bars.index)
 
@@ -735,19 +781,27 @@ class Algo(Broker):
             self.record(bars[-1:])
 
         if not stale_tick:
-            self.on_tick(self.get_instrument(tick))
+            if self.ticks[(self.ticks['symbol'] == symbol) | (
+                    self.ticks['symbol_group'] == symbol)].empty:
+                return
+            tick_instrument = self.get_instrument(tick)
+            if tick_instrument:
+                self.on_tick(tick_instrument)
 
     # ---------------------------------------
     def _base_bar_handler(self, bar):
         """ non threaded bar handler (called by threaded _tick_handler) """
         # bar symbol
-        symbol = bar['symbol'].values[0]
-        self_bars = self.bars.copy() # work on copy
+        symbol = bar['symbol'].values
+        if len(symbol) == 0:
+            return
+        symbol = symbol[0]
+        self_bars = self.bars.copy()  # work on copy
 
         is_tick_or_volume_bar = False
         handle_bar = True
 
-        if self.resolution[-1] in ("K", "V"):
+        if self.resolution[-1] in ("S", "K", "V"):
             is_tick_or_volume_bar = True
             handle_bar = self._caller("_tick_handler")
 
@@ -758,22 +812,30 @@ class Algo(Broker):
             # just add a bar (used by tick bar bandler)
             if self.threads == 0:
                 self.bars = self._update_window(self.bars, bar,
-                    window=self.bar_window)
+                                                window=self.bar_window)
             else:
                 self_bars = self._update_window(self_bars, bar,
-                    window=self.bar_window)
+                                                window=self.bar_window)
         else:
             # add the bar and resample to resolution
             if self.threads == 0:
                 self.bars = self._update_window(self.bars, bar,
-                    window=self.bar_window, resolution=self.resolution)
+                                                window=self.bar_window,
+                                                resolution=self.resolution)
             else:
                 self_bars = self._update_window(self_bars, bar,
-                    window=self.bar_window, resolution=self.resolution)
+                                                window=self.bar_window,
+                                                resolution=self.resolution)
 
         # assign new data to self.bars if threaded
         if self.threads > 0:
             self.bars = self._thread_safe_merge(symbol, self.bars, self_bars)
+
+        # optimize pandas
+        if len(self.bars) == 1:
+            self.bars['symbol'] = self.bars['symbol'].astype('category')
+            self.bars['symbol_group'] = self.bars['symbol_group'].astype('category')
+            self.bars['asset_class'] = self.bars['asset_class'].astype('category')
 
         # new bar?
         hash_string = bar[:1]['symbol'].to_string().translate(
@@ -786,11 +848,15 @@ class Algo(Broker):
         self.bar_hashes[symbol] = this_bar_hash
 
         if newbar and handle_bar:
-            self.record_ts = bar.index[0]
-            self.on_bar(self.get_instrument(symbol))
-
-            # if self.resolution[-1] not in ("S", "K", "V"):
-            self.record(bar)
+            if self.bars[(self.bars['symbol'] == symbol) | (
+                    self.bars['symbol_group'] == symbol)].empty:
+                return
+            bar_instrument = self.get_instrument(symbol)
+            if bar_instrument:
+                self.record_ts = bar.index[0]
+                self.on_bar(bar_instrument)
+                # if self.resolution[-1] not in ("S", "K", "V"):
+                self.record(bar)
 
     # ---------------------------------------
     @asynctools.multitasking.task
@@ -803,22 +869,25 @@ class Algo(Broker):
         if df is None:
             df = data
         else:
-            df = df.append(data)
+            df = df.append(data, sort=True)
 
         # resample
-        if resolution is not None:
-            try:
-                tz = str(df.index.tz)
-            except:
-                tz = None
+        if resolution:
+            tz = str(df.index.tz)
+            # try:
+            #     tz = str(df.index.tz)
+            # except Exception as e:
+            #     tz = None
             df = tools.resample(df, resolution=resolution, tz=tz)
 
-        # remove duplicates rows
-        df.loc[:, '_idx_'] = df.index
-        df.drop_duplicates(
-            subset=['_idx_', 'symbol', 'symbol_group', 'asset_class'],
-            keep='last', inplace=True)
-        df.drop('_idx_', axis=1, inplace=True)
+        else:
+            # remove duplicates rows
+            # (handled by resample if resolution is provided)
+            df.loc[:, '_idx_'] = df.index
+            df.drop_duplicates(
+                subset=['_idx_', 'symbol', 'symbol_group', 'asset_class'],
+                keep='last', inplace=True)
+            df.drop('_idx_', axis=1, inplace=True)
 
         # return
         if window is None:

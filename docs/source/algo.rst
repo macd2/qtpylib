@@ -1,7 +1,7 @@
 Writing Your Algorithm
 ======================
 
-When creating your algorithm, there are two functions that handles
+When creating your algorithm, there are 4 functions that handle
 incoming market data from the running Blotter. These are
 ``on_quote()`` which is invoked on every quote change,
 ``on_tick()`` which is invoked on every tick captured,
@@ -10,7 +10,7 @@ incoming market data from the running Blotter. These are
 
 An `Instrument Object <./api_instrument.html>`_ is being passed to each method when called.
 
-If you need to set some parameters when your strategy starts,
+If you need to run some logic when your strategy starts,
 simply add an ``on_start()`` method to your strategy, and set
 your parameters there.
 
@@ -20,7 +20,7 @@ run write code logic there.
 
 All methods are optional. You can run logic on start *and/or*
 on every tick *and/or* on every bar event as needed. Unnecessary can
-either use ``pass`` or be ommited from your strategy code.
+either use ``pass`` or be omitted from your strategy code.
 
 
 .. warning::
@@ -166,11 +166,11 @@ With your Blotter running in the background, run your algo from the command line
 
 .. code:: bash
 
-    $ python strategy.py --log ~/qtpy/
+    $ python strategy.py --log ~/qtpylib/
 
 
-By adding ``--log ~/qtpy/`` we ask that the resulting trade journal be saved
-in ``~/qtpy/STRATEGY_YYYYMMDD.csv`` for later analysis **in additioan** to
+By adding ``--log ~/qtpylib/`` we ask that the resulting trade journal be saved
+in ``~/qtpylib/STRATEGY_YYYYMMDD.csv`` for later analysis **in addition** to
 being saved in the database.
 
 -----
@@ -222,7 +222,7 @@ Using Multiple Instruments
 Initializing Parameters
 -----------------------
 
-Sometimes you'd want to set some parameters when you initlize
+Sometimes you'd want to set some parameters when you initialize
 your Strategy. To do so, simply add an ``on_start()`` method
 to your strategy, and set your parameters there. It will be
 invoked once when you strategy starts.
@@ -246,7 +246,7 @@ invoked once when you strategy starts.
 Adding Contracts After Initialization
 -------------------------------------
 
-Im some cases, you'd want to add instruments/contracts to your
+In some cases, you'd want to add instruments/contracts to your
 Strategy after it has already been initialized.
 
 This can be achieved using:
@@ -317,7 +317,7 @@ Algo Parameters
 Runtime (CLI) Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can override any of the above paramaters using run-time using command line arguments:
+You can override any of the above parameters using run-time using command line arguments:
 
 - ``--ibport`` IB TWS/GW Port to use (default: ``4001``)
 - ``--ibclient`` IB TWS/GW Client ID (default: ``998``)
@@ -331,7 +331,7 @@ You can override any of the above paramaters using run-time using command line a
 - ``--output`` Path to save the recorded data (default: ``None``)
 - ``--blotter`` Log trades to MySQL server used by this Blotter (default: ``auto-detect``)
 - ``--continuous`` Construct continuous Futures contracts (flag, default: ``True``)
-- ``--max_threads`` Maximum number of threads to use (default is 1)
+- ``--threads`` Maximum number of threads to use (default is 1)
 
 **Example:**
 
@@ -341,7 +341,7 @@ You can override any of the above paramaters using run-time using command line a
 
 .. note::
 
-    **It's recommended that you set the** ``max_threads`` **parameter based on your strategy's needs and your machine's capabilities!**
+    **It's recommended that you set the** ``threads`` **parameter based on your strategy's needs and your machine's capabilities!**
     As a general rule of thumb, strategies that are trading a handful of symbols probably don't need to tweak this parameter.
 
 ----
@@ -350,17 +350,17 @@ Back-Testing Using QTPyLib
 ---------------------------
 
 In addition to live/paper trading, QTPyLib can also be used for back-testing
-**without changing event one line of code**, simply by adding the
+**without changing a single line of code**, simply by adding the
 following arguments when running your algo.
 
 .. note::
 
     In order to run back-tests, you **MUST** have the relevant
-    historical data either stored in your ``Blotter``'s database, or
+    historical data either stored in your ``Blotter``'s database or
     as `QTPyLib-compatible CSV files <./workflow.html>`_
     (if using CSV files, you must specify the path using the ``--data`` parameter).
 
-    When backtesting Futures, the Blotter will will default to streaming
+    When backtesting Futures, the Blotter will default to streaming
     adjusted, continuous contracts for the contracts requested, based
     on previously captured market data stored in the Database.
 
@@ -373,7 +373,7 @@ With your Blotter running in the background, run your algo from the command line
 
 .. code:: bash
 
-    $ python strategy.py --backtest --start 2015-01-01 --end 2015-12-31 --data ~/mycsvdata/ -output ~/portfolio.pkl
+    $ python strategy.py --backtest --start 2015-01-01 --end 2015-12-31 --data ~/mycsvdata/ --output ~/portfolio.pkl
 
 The resulting back-tested portfolio will be saved in ``~/portfolio.pkl`` for later analysis.
 
@@ -396,7 +396,7 @@ Then run your algo with the ``--output`` flag:
     $ python strategy.py --output path/to/recorded-file.csv
 
 
-The recorded data (and bar data) will be made availble in ``./path/to/recorded-file.csv``,
+The recorded data (and bar data) will be made available in ``./path/to/recorded-file.csv``,
 which gets updated in real-time.
 
 -----
@@ -448,7 +448,7 @@ you'll get a Pandas DataFrame (and optionally, a dict object) with the following
 Instruments Tuples
 ------------------
 
-When initilizing your algo, you're required to pass a list of instruments
+When initializing your algo, you're required to pass a list of instruments
 you want to trades. List items can be a Ticker Symbol ``String`` (for **US Stocks** only),
 and either an IB Contract object or a ``Tuple`` in IB format for all other instruments.
 
@@ -482,7 +482,7 @@ whereas ``strike`` and ``opt_type`` must be a provided for Options (PUT/CALL).
 
 .. note::
     If you're trading **Front-Month Futures issued by CME-Group**, you can use the
-    ``FUT.SYMBOL`` shorthand to have the QTPyLib create the tuple for you (`see more Futures-specific methos here <./futures.html>`_).
+    ``FUT.SYMBOL`` shorthand to have the QTPyLib create the tuple for you (`see more Futures-specific methods here <./futures.html>`_).
 
     .. code:: python
 

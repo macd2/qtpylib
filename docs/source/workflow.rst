@@ -1,7 +1,7 @@
 Data Workflow
 =============
 
-QTPyLib's new ``workflow`` module includes some handly methods for
+QTPyLib's new ``workflow`` module includes some handy methods for
 working with external data sources when backtesting.
 
 Working with External Data
@@ -23,13 +23,13 @@ so it can be used just like any other data captured by your ``Blotter``.
     # load the workflow module
     from qtpylib import workflow as wf
 
-    # load your existing market data as Pandas DataFrame.
-    # here, we'll download 1-min intraday data from Google
-    external_data = wf.get_data_google_inrtaday("AAPL")
+    # Load some data from Quandl
+    import quandl
+    aapl = quandl.get("WIKI/AAPL", authtoken="your token here")
 
     # convert the data into a QTPyLib-compatible
-    # data will be saved in ~/Desktop/AAPL.csv
-    df = wf.prepare_data("AAPL", data=external_data, output_path="~/Desktop/")
+    # data will be saved in ~/Desktop/AAPL.BAR.csv
+    df = wf.prepare_data("AAPL", data=aapl, output_path="~/Desktop/")
 
     # store converted bar data in MySQL
     # optional, requires a running Blotter
@@ -38,11 +38,11 @@ so it can be used just like any other data captured by your ``Blotter``.
 
 .. note::
 
-    The first agrument in ``prepare_data()`` must be a **valid string as IB tuple**
+    The first argument in ``prepare_data()`` must be a **valid string as IB tuple**
     (just like the those specified in your strategy's ``instruments`` parameter).
     For a complete list of available methods and parameters for each
     method, please refer to the `Workflow API <./api.html#workflow-api>`_
-    for full list of available parameters for each method.
+    for a full list of available parameters for each method.
 
 
 Using CSV files when Backtesting
@@ -54,7 +54,7 @@ running your backtests, for example:
 
 .. code:: bash
 
-    $ python strategy.py --backtest --start 2015-01-01 --end 2015-12-31 --data ~/mycsvdata/ -output ~/portfolio.pkl
+    $ python strategy.py --backtest --start 2015-01-01 --end 2015-12-31 --data ~/mycsvdata/ --output ~/portfolio.pkl
 
 Please refer to `Back-Testing Using QTPyLib <./algo.html#back-testing-using-qtpylib>`_
 for more information about back-testing using QTPyLib.

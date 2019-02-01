@@ -4,13 +4,13 @@
 # QTPyLib: Quantitative Trading Python Library
 # https://github.com/ranaroussi/qtpylib
 #
-# Copyright 2016 Ran Aroussi
+# Copyright 2016-2018 Ran Aroussi
 #
-# Licensed under the GNU Lesser General Public License, v3.0 (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://www.gnu.org/licenses/lgpl-3.0.en.html
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,20 +19,20 @@
 # limitations under the License.
 #
 
-__version__ = '1.5.77'
+__version__ = '1.5.82'
 __author__ = 'Ran Aroussi'
-
-from . import *
-
-# make indicators available as pandas extentions
-import qtpylib.indicators as indicators
 
 import os
 import sys
 
+# make indicators available as pandas extentions
+import qtpylib.indicators as indicators
+
+from . import *
+
 path = {
-    "library": os.path.dirname( os.path.realpath(__file__) ),
-    "caller": os.path.dirname( os.path.realpath(sys.argv[0]) )
+    "library": os.path.dirname(os.path.realpath(__file__)),
+    "caller": os.path.dirname(os.path.realpath(sys.argv[0]))
 }
 
 __all__ = [

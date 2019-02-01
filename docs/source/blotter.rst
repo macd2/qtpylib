@@ -14,7 +14,7 @@ algorithms subscribe to the Blotter's updates via pub/sub
 mechanism using ZeroMQ - a blazing fast Message Queue.
 
 .. note::
-    QTPyLib was designed with a **"One Blotter To Rule Them All"**
+    QTPyLib was created with a **"One Blotter To Rule Them All"**
     design in mind. All your algorithms can listen to a single
     Blotter running in the background without a problem and without
     consuming any unnecessary system resources.
@@ -42,7 +42,7 @@ Writing your Blotter
 To get started writing your Blotter, you'll need to create
 a Blotter object sub-class and name it.
 
-Then, inililize your Blotter by passing your MySQL credentials
+Then, initialize your Blotter by passing your MySQL credentials
 and TWS/IBGW port and run it.
 
 .. code:: python
@@ -77,10 +77,10 @@ With IB TWS/GW running, run the Blotter from the command line:
     $ python blotter.py
 
 
-Initilizing via CLI
-~~~~~~~~~~~~~~~~~~~
+Initializing via CLI
+~~~~~~~~~~~~~~~~~~~~
 
-You can also override the initilized paramters (or ommit this
+You can also override the initilized parameters (or omit this
 part of the code altogether) and pass runtime parameters
 using the command line.
 
@@ -108,7 +108,7 @@ Then, run the Blotter by passing the parameters via the command line:
 Available Arguments
 ~~~~~~~~~~~~~~~~~~~
 
-Below are all the parameters that can either be set via the ``Blotter()`` initilizer
+Below are all the parameters that can either be set via the ``Blotter()`` initializer
 or via CLI:
 
 - ``--symbols`` CSV database of IB contracts for market data fetching (default: ``./symbols.csv``)
@@ -124,12 +124,11 @@ or via CLI:
 - ``--dbpass`` MySQL server password (default: ``None``)
 - ``--dbskip`` [flag] Skip MySQL logging of market data (default: ``False``)
 - ``--orderbook`` [flag] Tells the blotter to fetch and stream order book data (default: ``False``)
-- ``--dbpass`` MySQL server password (default: ``None``)
-- ``--max_threads`` Maximum number of threads to use (default is 1)
+- ``--threads`` Maximum number of threads to use (default is 1)
 
 .. note::
 
-    **It's recommended that you set the** ``max_threads`` **parameter based on your strategy's needs and your machine's capabilities!**
+    **It's recommended that you set the** ``threads`` **parameter based on your strategy's needs and your machine's capabilities!**
     As a general rule of thumb, unless you're subscribing to 100+ instruments, you probably don't need to tweak this parameter.
 
 -----
@@ -144,7 +143,7 @@ as your Blotter.
 This fill will store all the instruments that algos connecting to this
 Blotter will request data for. Your blotter will keep logging market
 data for these instruments even when you stop your algos so you have
-continious market data stored in your database for future research
+continuous market data stored in your database for future research
 and backtesting (expired product will be deleted automatically from
 this file).
 

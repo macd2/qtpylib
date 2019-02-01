@@ -4,13 +4,13 @@
 # QTPyLib: Quantitative Trading Python Library
 # https://github.com/ranaroussi/qtpylib
 #
-# Copyright 2016 Ran Aroussi
+# Copyright 2016-2018 Ran Aroussi
 #
-# Licensed under the GNU Lesser General Public License, v3.0 (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://www.gnu.org/licenses/lgpl-3.0.en.html
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,10 +18,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import random
+
 from qtpylib.algo import Algo
 from qtpylib import futures
 
-import random
 
 class TestStrategy(Algo):
     """
@@ -32,6 +33,8 @@ class TestStrategy(Algo):
     If still in position for next 5 ticks, an exit order is issued.
     """
 
+    count = 0
+
     # ---------------------------------------
     def on_start(self):
         """ initilize tick counter """
@@ -41,6 +44,14 @@ class TestStrategy(Algo):
     def on_quote(self, instrument):
         # quote = instrument.get_quote()
         # ^^ quote data available via get_quote()
+        pass
+
+    # ---------------------------------------
+    def on_orderbook(self, instrument):
+        pass
+
+    # ---------------------------------------
+    def on_fill(self, instrument, order):
         pass
 
     # ---------------------------------------
@@ -66,28 +77,27 @@ class TestStrategy(Algo):
             else:
                 # random order direction
                 direction = random.choice(["BUY", "SELL"])
-                print(instrument.symbol, 'not in position. Sending a bracket ', direction, 'order...')
+                print(instrument.symbol,
+                      'not in position. Sending a bracket ', direction, 'order...')
 
                 if direction == "BUY":
-                    target   = tick['last']+0.5
-                    stoploss = tick['last']-0.5
+                    target = tick['last'] + 0.5
+                    stoploss = tick['last'] - 0.5
                 else:
-                    target   = tick['last']-0.5
-                    stoploss = tick['last']+0.5
+                    target = tick['last'] - 0.5
+                    stoploss = tick['last'] + 0.5
 
                 instrument.order(direction, 1,
-                        ticksize = 0.25,
-                        limit_price = tick['last'],
-                        target = target,
-                        initial_stop = stoploss,
-                        trail_stop_at = 0,
-                        trail_stop_by = 0,
-                        expiry=5
-                    )
+                                 limit_price=tick['last'],
+                                 target=target,
+                                 initial_stop=stoploss,
+                                 trail_stop_at=0,
+                                 trail_stop_by=0,
+                                 expiry=5
+                                 )
 
                 # record action
                 self.record(take_action=1)
-
 
     # ---------------------------------------
     def on_bar(self, instrument):
@@ -104,9 +114,9 @@ if __name__ == "__main__":
     print("Active month for ES is:", ACTIVE_MONTH)
 
     strategy = TestStrategy(
-        instruments = [ ("ES", "FUT", "GLOBEX", "USD", ACTIVE_MONTH, 0.0, "") ],
-        resolution  = "1T",
-        tick_window = 10,
-        bar_window  = 10
+        instruments=[("ES", "FUT", "GLOBEX", "USD", ACTIVE_MONTH, 0.0, "")],
+        resolution="1T",
+        tick_window=10,
+        bar_window=10
     )
     strategy.run()

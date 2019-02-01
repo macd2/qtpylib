@@ -4,13 +4,13 @@
 # QTPyLib: Quantitative Trading Python Library
 # https://github.com/ranaroussi/qtpylib
 #
-# Copyright 2016 Ran Aroussi
+# Copyright 2016-2018 Ran Aroussi
 #
-# Licensed under the GNU Lesser General Public License, v3.0 (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://www.gnu.org/licenses/lgpl-3.0.en.html
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -53,7 +53,8 @@ class multitasking():
             name = cls.__POOL_NAME__
 
         return {
-            "engine": "thread" if cls.__POOLS__[cls.__POOL_NAME__]["engine"] == Thread else "process",
+            "engine": "thread" if cls.__POOLS__[cls.__POOL_NAME__
+                                                ]["engine"] == Thread else "process",
             "name": name,
             "threads": cls.__POOLS__[cls.__POOL_NAME__]["threads"]
         }
@@ -63,9 +64,12 @@ class multitasking():
 
         cls.__POOL_NAME__ = name
 
+        # if threads is None:
+        #     threads = cls.__CPU_CORES__
+
         try:
             threads = int(threads)
-        except:
+        except Exception as e:
             threads = 1
 
         # 1 thread is no threads
@@ -73,7 +77,7 @@ class multitasking():
             threads = 0
 
         cls.__POOLS__[cls.__POOL_NAME__] = {
-            "pool": Semaphore(threads) if threads > 0 else None,
+            "pool": Semaphore(threads) if threads > 0 else 1,
             "engine": Process if "process" in engine.lower() else Thread,
             "name": name,
             "threads": threads
@@ -103,6 +107,8 @@ class multitasking():
                 task.start()
                 return task
 
+            return None
+
         return async_method
 
     @classmethod
@@ -113,10 +119,12 @@ class multitasking():
             return True
 
         try:
-            running = len([t.join(1) for t in cls.__TASKS__ if t is not None and t.isAlive()])
+            running = len([t.join(1)
+                           for t in cls.__TASKS__ if t is not None and t.isAlive()])
             while running > 0:
-                running = len([t.join(1) for t in cls.__TASKS__ if t is not None and t.isAlive()])
-        except:
+                running = len(
+                    [t.join(1) for t in cls.__TASKS__ if t is not None and t.isAlive()])
+        except Exception as e:
             pass
         return True
 
@@ -134,7 +142,7 @@ class multitasking():
 class RecurringTask(Thread):
     """Calls a function at a sepecified interval."""
 
-    def __init__(self, func, interval_sec, init_sec=0, *args, **kwargs):
+    def __init__(self, func, interval_sec, init_sec, *args, **kwargs):
         """Call `func` every `interval_sec` seconds.
 
         Starts the timer.
