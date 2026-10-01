@@ -13,13 +13,17 @@ QTPyLib, Pythonic Algorithmic Trading
     :target: https://pypi.python.org/pypi/qtpylib
     :alt: PyPi status
 
-.. image:: https://img.shields.io/travis/ranaroussi/qtpylib/master.svg?maxAge=1
+.. image:: https://img.shields.io/travis/ranaroussi/qtpylib/main.svg?maxAge=1
     :target: https://travis-ci.org/ranaroussi/qtpylib
     :alt: Travis-CI build status
 
 .. image:: https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat
     :target: http://qtpylib.io/docs/latest/?badge=latest
     :alt: Documentation Status
+
+.. image:: https://img.shields.io/badge/Chat-Discord-%237289d6.svg?style=flat&logo=discord&maxAge=60
+    :target: https://discord.gg/7wEzsuV
+    :alt: Chat on Discord
 
 .. image:: https://img.shields.io/github/stars/ranaroussi/qtpylib.svg?style=social&label=Star&maxAge=60
     :target: https://github.com/ranaroussi/qtpylib
@@ -43,6 +47,11 @@ trading logic itself and ignore everything else.
 `Full Documentation » <http://www.qtpylib.io/>`_
 
 `Changelog » <./CHANGELOG.rst>`_
+
+-----
+
+**Read about the future of QTPyLib here:**
+https://aroussi.com/post/the-future-of-qtpylib
 
 -----
 
@@ -142,8 +151,8 @@ While the Blotter running in the background, write and execute your algorithm:
                 return
 
             # compute averages using internal rolling_mean
-            bars['short_ma'] = bars['close'].rolling_mean(window=10)
-            bars['long_ma']  = bars['close'].rolling_mean(window=20)
+            bars['short_ma'] = bars['close'].rolling(window=10).mean()
+            bars['long_ma']  = bars['close'].rolling(window=20).mean()
 
             # get current position data
             positions = instrument.get_positions()
